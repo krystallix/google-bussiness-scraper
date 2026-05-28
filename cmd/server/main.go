@@ -94,7 +94,15 @@ func handleScrape(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "scraper already running", http.StatusConflict)
 		return
 	}
-	*state = jobState{Running: true, Keyword: req.Keyword, StartedAt: time.Now()}
+	// Reset fields individually — never replace the whole struct while the
+	// mutex is held, as that would zero out the mutex itself and panic on Unlock.
+	state.Running = true
+	state.Done = false
+	state.Error = ""
+	state.Results = nil
+	state.Total = 0
+	state.Keyword = req.Keyword
+	state.StartedAt = time.Now()
 	state.mu.Unlock()
 
 	go func() {

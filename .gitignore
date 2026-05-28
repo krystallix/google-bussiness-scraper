@@ -1,0 +1,11 @@
+# compiled binary
+scraper
+
+# output files
+output/
+
+# macOS
+.DS_Store
+
+# Go build cache
+*.test

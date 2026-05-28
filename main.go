@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	sc "google-bussines-scraper/internal/scraper"
 )
 
 const banner = `
@@ -22,7 +24,6 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	// 1. Keyword
 	var keyword string
 	for keyword == "" {
 		fmt.Print("Search keyword (e.g. coffee shop Bandung): ")
@@ -33,7 +34,6 @@ func main() {
 		}
 	}
 
-	// 2. Limit
 	limit := 50
 	fmt.Printf("\nMax results to collect (default %d): ", limit)
 	line, _ := reader.ReadString('\n')
@@ -46,7 +46,6 @@ func main() {
 		}
 	}
 
-	// 3. Headful
 	headful := false
 	fmt.Print("\nShow browser window? (y/N): ")
 	line, _ = reader.ReadString('\n')
@@ -55,7 +54,6 @@ func main() {
 		headful = true
 	}
 
-	// 4. Delay
 	delay := 1.5
 	fmt.Print("\nDelay between pages in seconds (default 1.5): ")
 	line, _ = reader.ReadString('\n')
@@ -68,7 +66,6 @@ func main() {
 		}
 	}
 
-	// Summary
 	fmt.Printf("\n%s\n", strings.Repeat("-", 52))
 	fmt.Printf("  Keyword : %s\n", keyword)
 	fmt.Printf("  Limit   : %d results\n", limit)
@@ -81,10 +78,10 @@ func main() {
 	fmt.Printf("  Delay   : %.1fs\n", delay)
 	fmt.Printf("%s\n", strings.Repeat("-", 52))
 
-	csvPath, xlsxPath := outputPaths("", keyword)
+	csvPath, xlsxPath := sc.OutputPaths("", keyword)
 
 	startTime := time.Now()
-	data, err := ScrapeGoogleMaps(keyword, limit, headful, delay)
+	data, err := sc.ScrapeGoogleMaps(keyword, limit, headful, delay)
 	elapsed := time.Since(startTime)
 
 	if err != nil {
@@ -96,11 +93,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := saveCSV(csvPath, data); err != nil {
+	if err := sc.SaveCSV(csvPath, data); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to save CSV: %v\n", err)
 		os.Exit(1)
 	}
-	if err := saveXLSX(xlsxPath, data); err != nil {
+	if err := sc.SaveXLSX(xlsxPath, data); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to save Excel: %v\n", err)
 		os.Exit(1)
 	}

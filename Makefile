@@ -1,17 +1,22 @@
-.PHONY: run build filter clean
+.PHONY: run build serve filter clean
 
 BINARY := scraper
 GOENV  := GOTOOLCHAIN=local CGO_ENABLED=0
 
-# Build and run the scraper interactively
+# Build and run the scraper interactively (CLI mode)
 run: build
 	@./$(BINARY)
 
-# Compile the binary
+# Compile the CLI binary
 build:
-	@echo "Building..."
+	@echo "Building CLI..."
 	@$(GOENV) go build -o $(BINARY) .
 	@echo "Done. Run with: ./$(BINARY)"
+
+# Start the web GUI dashboard
+serve:
+	@echo "Starting web dashboard at http://127.0.0.1:8080"
+	@$(GOENV) go run ./cmd/server/
 
 # Filter and classify existing CSV output into leads report
 filter:

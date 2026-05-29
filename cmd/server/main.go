@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ type jobState struct {
 }
 
 type leadJSON struct {
+	ID         string  `json:"id"`
 	Name       string  `json:"name"`
 	Category   string  `json:"category"`
 	Rating     float64 `json:"rating"`
@@ -50,14 +52,55 @@ type scrapeRequest struct {
 	Delay   float64 `json:"delay"`
 }
 
+type addLeadRequest struct {
+	Name     string  `json:"name"`
+	Category string  `json:"category"`
+	Rating   float64 `json:"rating"`
+	Reviews  int     `json:"reviews"`
+	Address  string  `json:"address"`
+	Phone    string  `json:"phone"`
+	Website  string  `json:"website"`
+	MapsURL  string  `json:"maps_url"`
+}
+
+type updateLeadRequest struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Category string  `json:"category"`
+	Rating   float64 `json:"rating"`
+	Reviews  int     `json:"reviews"`
+	Address  string  `json:"address"`
+	Phone    string  `json:"phone"`
+	Website  string  `json:"website"`
+	MapsURL  string  `json:"maps_url"`
+}
+
+type deleteLeadRequest struct {
+	ID string `json:"id"`
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 func main() {
+	// Load initial state from persistent JSON database
+	if _, err := os.Stat("scraped_businesses.json"); err == nil {
+		businesses, err := sc.LoadPersistentJSON()
+		if err == nil && len(businesses) > 0 {
+			state.mu.Lock()
+			reloadMemoryState(businesses)
+			state.mu.Unlock()
+			fmt.Printf("Loaded %d leads from persistent database (scraped_businesses.json)\n", len(businesses))
+		}
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", serveIndex)
 	mux.HandleFunc("POST /api/scrape", handleScrape)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/results", handleResults)
+	mux.HandleFunc("POST /api/leads/add", handleAddLead)
+	mux.HandleFunc("POST /api/leads/update", handleUpdateLead)
+	mux.HandleFunc("POST /api/leads/delete", handleDeleteLead)
 
 	addr := "127.0.0.1:8080"
 	fmt.Printf("\nG-Lead Scraper dashboard running at http://%s\n\n", addr)
@@ -118,26 +161,6 @@ func handleScrape(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		leads := sc.BusinessesToLeads(businesses)
-		state.Total = len(leads)
-		state.Results = make([]leadJSON, 0, len(leads))
-		for _, l := range leads {
-			state.Results = append(state.Results, leadJSON{
-				Name:       l.Name,
-				Category:   l.Category,
-				Rating:     l.RatingFloat,
-				Reviews:    l.Reviews,
-				Address:    l.Address,
-				Phone:      l.Phone,
-				Website:    l.Website,
-				MapsURL:    l.MapsURL,
-				HasWebsite: l.HasWebsite,
-				HasPhone:   l.HasPhone,
-				Tier:       l.Tier,
-				Reason:     l.Reason,
-			})
-		}
-
 		// Save files in background
 		ts := time.Now().Format("20060102_150405")
 		csvPath := fmt.Sprintf("output/google_maps_%s_%s.csv", sc.CleanFilename(req.Keyword), ts)
@@ -145,6 +168,17 @@ func handleScrape(w http.ResponseWriter, r *http.Request) {
 		sc.SaveCSV(csvPath, businesses)   //nolint:errcheck
 		sc.SaveXLSX(xlsxPath, businesses) //nolint:errcheck
 		fmt.Printf("Saved: %s | %s\n", csvPath, xlsxPath)
+
+		// Save to persistent JSON
+		_ = sc.SavePersistentJSON(businesses)
+
+		// Reload all accumulated businesses to state so dashboard reflects full history
+		accumulated, err := sc.LoadPersistentJSON()
+		if err == nil {
+			businesses = accumulated
+		}
+
+		reloadMemoryState(businesses)
 	}()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -179,4 +213,176 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// reloadMemoryState updates the in-memory state.Results from a list of sc.Business records.
+// Expects state.mu to be locked already by the caller.
+func reloadMemoryState(businesses []sc.Business) {
+	leads := sc.BusinessesToLeads(businesses)
+	state.Total = len(leads)
+	state.Results = make([]leadJSON, 0, len(leads))
+	for _, l := range leads {
+		state.Results = append(state.Results, leadJSON{
+			ID:         l.ID,
+			Name:       l.Name,
+			Category:   l.Category,
+			Rating:     l.RatingFloat,
+			Reviews:    l.Reviews,
+			Address:    l.Address,
+			Phone:      l.Phone,
+			Website:    l.Website,
+			MapsURL:    l.MapsURL,
+			HasWebsite: l.HasWebsite,
+			HasPhone:   l.HasPhone,
+			Tier:       l.Tier,
+			Reason:     l.Reason,
+		})
+	}
+	state.Done = true
+}
+
+func handleAddLead(w http.ResponseWriter, r *http.Request) {
+	var req addLeadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" {
+		jsonError(w, "business name is required", http.StatusBadRequest)
+		return
+	}
+
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	// Convert requests to Business
+	newBiz := sc.Business{
+		Name:         req.Name,
+		Category:     req.Category,
+		Rating:       fmt.Sprintf("%.1f", req.Rating),
+		ReviewsCount: fmt.Sprintf("%d", req.Reviews),
+		Address:      req.Address,
+		Phone:        req.Phone,
+		Website:      req.Website,
+		MapsURL:      req.MapsURL,
+	}
+	newBiz.ID = sc.GenerateID(newBiz)
+
+	// Load existing persistent JSON
+	businesses, err := sc.LoadPersistentJSON()
+	if err != nil {
+		// If loading failed (e.g. no file), start empty
+		businesses = []sc.Business{}
+	}
+
+	// Append and save back
+	businesses = append(businesses, newBiz)
+	if err := sc.SaveAllPersistentJSON(businesses); err != nil {
+		jsonError(w, fmt.Sprintf("failed to save: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Reload all to memory state
+	reloadMemoryState(businesses)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "id": newBiz.ID})
+}
+
+func handleUpdateLead(w http.ResponseWriter, r *http.Request) {
+	var req updateLeadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		jsonError(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	businesses, err := sc.LoadPersistentJSON()
+	if err != nil {
+		jsonError(w, "database empty or unreadable", http.StatusNotFound)
+		return
+	}
+
+	found := false
+	for i, b := range businesses {
+		if b.ID == req.ID {
+			businesses[i].Name = req.Name
+			businesses[i].Category = req.Category
+			businesses[i].Rating = fmt.Sprintf("%.1f", req.Rating)
+			businesses[i].ReviewsCount = fmt.Sprintf("%d", req.Reviews)
+			businesses[i].Address = req.Address
+			businesses[i].Phone = req.Phone
+			businesses[i].Website = req.Website
+			businesses[i].MapsURL = req.MapsURL
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		jsonError(w, "business not found", http.StatusNotFound)
+		return
+	}
+
+	if err := sc.SaveAllPersistentJSON(businesses); err != nil {
+		jsonError(w, fmt.Sprintf("failed to save: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	reloadMemoryState(businesses)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+func handleDeleteLead(w http.ResponseWriter, r *http.Request) {
+	var req deleteLeadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		jsonError(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	businesses, err := sc.LoadPersistentJSON()
+	if err != nil {
+		jsonError(w, "database empty or unreadable", http.StatusNotFound)
+		return
+	}
+
+	found := false
+	var updated []sc.Business
+	for _, b := range businesses {
+		if b.ID == req.ID {
+			found = true
+			continue
+		}
+		updated = append(updated, b)
+	}
+
+	if !found {
+		jsonError(w, "business not found", http.StatusNotFound)
+		return
+	}
+
+	if err := sc.SaveAllPersistentJSON(updated); err != nil {
+		jsonError(w, fmt.Sprintf("failed to save: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	reloadMemoryState(updated)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }

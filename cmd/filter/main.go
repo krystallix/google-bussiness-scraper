@@ -16,33 +16,51 @@ import (
 )
 
 func main() {
+	var allBusinesses []sc.Business
+
+	// Try reading from persistent json database first
+	if _, err := os.Stat("scraped_businesses.json"); err == nil {
+		bs, err := sc.LoadPersistentJSON()
+		if err != nil {
+			fmt.Printf("WARN: could not read scraped_businesses.json: %v\n", err)
+		} else {
+			allBusinesses = append(allBusinesses, bs...)
+			fmt.Printf("Loaded %d business(es) from persistent database (scraped_businesses.json)\n", len(bs))
+		}
+	}
+
+	// Also find and merge any CSV files in output/
 	files, err := filepath.Glob("output/*.csv")
-	if err != nil || len(files) == 0 {
-		fmt.Println("No CSV files found in output/")
+	var csvCount int
+	if err == nil && len(files) > 0 {
+		for _, f := range files {
+			if strings.Contains(filepath.Base(f), "filtered_leads") {
+				continue
+			}
+			csvCount++
+		}
+	}
+
+	if len(allBusinesses) == 0 && csvCount == 0 {
+		fmt.Println("No data found! Neither scraped_businesses.json nor CSV files in output/ exist.")
 		os.Exit(1)
 	}
 
-	fmt.Printf("Found %d CSV file(s):\n", len(files))
-	for _, f := range files {
-		// skip filtered output files
-		if strings.Contains(filepath.Base(f), "filtered_leads") {
-			continue
+	if csvCount > 0 {
+		fmt.Printf("Merging with %d CSV file(s) from output/:\n", csvCount)
+		for _, f := range files {
+			if strings.Contains(filepath.Base(f), "filtered_leads") {
+				continue
+			}
+			fmt.Printf("  - %s\n", f)
+			bs, err := sc.ParseCSV(f)
+			if err != nil {
+				fmt.Printf("WARN: could not read %s: %v\n", f, err)
+				continue
+			}
+			allBusinesses = append(allBusinesses, bs...)
 		}
-		fmt.Printf("  - %s\n", f)
-	}
-	fmt.Println()
-
-	var allBusinesses []sc.Business
-	for _, f := range files {
-		if strings.Contains(filepath.Base(f), "filtered_leads") {
-			continue
-		}
-		bs, err := sc.ParseCSV(f)
-		if err != nil {
-			fmt.Printf("WARN: could not read %s: %v\n", f, err)
-			continue
-		}
-		allBusinesses = append(allBusinesses, bs...)
+		fmt.Println()
 	}
 
 	// Deduplicate by phone

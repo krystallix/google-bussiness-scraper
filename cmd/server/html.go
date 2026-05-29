@@ -225,6 +225,35 @@ const indexHTML = `<!DOCTYPE html>
   .btn-wa:hover { background: rgba(37,211,102,0.22); }
   .btn-wa svg { width: 12px; height: 12px; }
 
+  .btn-edit {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3);
+    text-decoration: none; cursor: pointer; transition: background 0.15s;
+    font-family: 'Geist Mono', monospace; white-space: nowrap;
+  }
+  .btn-edit:hover { background: rgba(59,130,246,0.22); }
+  .btn-edit svg { width: 12px; height: 12px; }
+
+  .btn-delete {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3);
+    text-decoration: none; cursor: pointer; transition: background 0.15s;
+    font-family: 'Geist Mono', monospace; white-space: nowrap;
+  }
+  .btn-delete:hover { background: rgba(239,68,68,0.22); }
+  .btn-delete svg { width: 12px; height: 12px; }
+
+  .btn-add {
+    padding: 10px 20px; background: transparent; color: var(--text);
+    border: 1px solid var(--border2); border-radius: var(--radius); font-family: 'Geist', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: all 0.15s, transform 0.1s; letter-spacing: 0.01em;
+  }
+  .btn-add:hover { background: var(--border); border-color: var(--text); }
+  .btn-add:active { transform: scale(0.98); }
+
   /* ── Empty / Loading ── */
   .empty-state {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -364,6 +393,7 @@ const indexHTML = `<!DOCTYPE html>
           </label>
         </div>
         <button class="btn-scrape" id="btn-scrape" onclick="startScrape()">Start Scraping</button>
+        <button class="btn-add" id="btn-add" onclick="openAddModal()">Add Manual Lead</button>
       </div>
     </div>
 
@@ -441,6 +471,67 @@ const indexHTML = `<!DOCTYPE html>
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn-send" onclick="sendWhatsApp()">Open WhatsApp</button>
     </div>
+  </div>
+</div>
+
+<!-- Add/Edit Lead Modal -->
+<div class="modal-overlay" id="lead-modal">
+  <div class="modal" style="max-width: 600px;">
+    <div class="modal-header">
+      <span class="modal-title" id="lead-modal-title">Add Manual Lead</span>
+      <button class="modal-close" onclick="closeLeadModal()">&times;</button>
+    </div>
+    <form id="lead-form" onsubmit="saveLead(event)" style="display:flex; flex-direction:column; gap:12px;">
+      <input type="hidden" id="lead-id">
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div>
+          <label style="margin-bottom: 4px; font-weight: 500;">Business Name *</label>
+          <input type="text" id="form-name" class="keyword-input" style="padding-left:12px;" required>
+        </div>
+        <div>
+          <label style="margin-bottom: 4px; font-weight: 500;">Category</label>
+          <input type="text" id="form-category" class="keyword-input" style="padding-left:12px;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div>
+          <label style="margin-bottom: 4px; font-weight: 500;">Rating (0.0 - 5.0)</label>
+          <input type="number" id="form-rating" class="keyword-input" style="padding-left:12px;" min="0" max="5" step="0.1" value="0">
+        </div>
+        <div>
+          <label style="margin-bottom: 4px; font-weight: 500;">Reviews Count</label>
+          <input type="number" id="form-reviews" class="keyword-input" style="padding-left:12px;" min="0" value="0">
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom: 4px; font-weight: 500;">Address</label>
+        <input type="text" id="form-address" class="keyword-input" style="padding-left:12px;">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+        <div>
+          <label style="margin-bottom: 4px; font-weight: 500;">Phone Number</label>
+          <input type="text" id="form-phone" class="keyword-input" style="padding-left:12px;" placeholder="e.g. 08123456789">
+        </div>
+        <div>
+          <label style="margin-bottom: 4px; font-weight: 500;">Website URL</label>
+          <input type="text" id="form-website" class="keyword-input" style="padding-left:12px;" placeholder="e.g. https://...">
+        </div>
+      </div>
+
+      <div>
+        <label style="margin-bottom: 4px; font-weight: 500;">Google Maps URL</label>
+        <input type="text" id="form-maps-url" class="keyword-input" style="padding-left:12px;" placeholder="e.g. https://maps.google.com/...">
+      </div>
+
+      <div class="modal-footer" style="margin-top:10px;">
+        <button type="button" class="btn-ghost" onclick="closeLeadModal()">Cancel</button>
+        <button type="submit" class="btn-scrape" style="padding: 8px 16px;">Save Lead</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -607,6 +698,14 @@ const indexHTML = `<!DOCTYPE html>
           'WhatsApp</button>'
         : '';
 
+      const editBtn = '<button class="btn-edit" onclick="openEditModal(\'' + l.id + '\')">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+        'Edit</button>';
+
+      const deleteBtn = '<button class="btn-delete" onclick="deleteLead(\'' + l.id + '\')">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+        'Delete</button>';
+
       return '<tr>' +
         '<td class="cell-name"><a href="' + escHtml(l.maps_url) + '" target="_blank">' + escHtml(l.name) + '</a>' +
         (l.address ? '<div class="sub">' + escHtml(l.address.substring(0, 60)) + (l.address.length > 60 ? '...' : '') + '</div>' : '') +
@@ -619,7 +718,7 @@ const indexHTML = `<!DOCTYPE html>
           ? '<span class="chip chip-hassite">has site</span>'
           : '<span class="chip chip-nosite">no site</span>') + '</td>' +
         '<td><span class="tier-badge tier-' + tierKey + '" data-tip="' + escHtml(l.reason) + '">' + tierLabel + '</span></td>' +
-        '<td>' + waBtn + '</td>' +
+        '<td><div style="display:flex;gap:6px">' + waBtn + editBtn + deleteBtn + '</div></td>' +
         '</tr>';
     }).join('');
   }
@@ -664,6 +763,9 @@ const indexHTML = `<!DOCTYPE html>
   document.getElementById('wa-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
+  document.getElementById('lead-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeLeadModal();
+  });
 
   // Enter to scrape
   document.getElementById('keyword').addEventListener('keydown', function(e) {
@@ -672,8 +774,126 @@ const indexHTML = `<!DOCTYPE html>
 
   // Escape to close modal
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal();
+      closeLeadModal();
+    }
   });
+
+  // ── Lead CRUD Modals ───────────────────────────────────────────────────────
+  function openAddModal() {
+    document.getElementById('lead-id').value = '';
+    document.getElementById('lead-modal-title').textContent = 'Add Manual Lead';
+    document.getElementById('lead-form').reset();
+    document.getElementById('lead-modal').classList.add('open');
+  }
+
+  function openEditModal(id) {
+    const lead = allLeads.find(l => l.id === id);
+    if (!lead) return;
+
+    document.getElementById('lead-id').value = lead.id;
+    document.getElementById('lead-modal-title').textContent = 'Edit Business: ' + lead.name;
+    
+    document.getElementById('form-name').value = lead.name || '';
+    document.getElementById('form-category').value = lead.category || '';
+    document.getElementById('form-rating').value = lead.rating || 0;
+    document.getElementById('form-reviews').value = lead.reviews || 0;
+    document.getElementById('form-address').value = lead.address || '';
+    document.getElementById('form-phone').value = lead.phone || '';
+    document.getElementById('form-website').value = lead.website || '';
+    document.getElementById('form-maps-url').value = lead.maps_url || '';
+
+    document.getElementById('lead-modal').classList.add('open');
+  }
+
+  function closeLeadModal() {
+    document.getElementById('lead-modal').classList.remove('open');
+  }
+
+  async function saveLead(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('lead-id').value;
+    const payload = {
+      name: document.getElementById('form-name').value.trim(),
+      category: document.getElementById('form-category').value.trim(),
+      rating: parseFloat(document.getElementById('form-rating').value) || 0,
+      reviews: parseInt(document.getElementById('form-reviews').value) || 0,
+      address: document.getElementById('form-address').value.trim(),
+      phone: document.getElementById('form-phone').value.trim(),
+      website: document.getElementById('form-website').value.trim(),
+      maps_url: document.getElementById('form-maps-url').value.trim()
+    };
+
+    const endpoint = id ? '/api/leads/update' : '/api/leads/add';
+    if (id) {
+      payload.id = id;
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      
+      closeLeadModal();
+      await loadResults();
+      setStatus('done', id ? 'Successfully updated lead!' : 'Successfully added manual lead!');
+    } catch (e) {
+      alert('Error saving lead: ' + e.message);
+    }
+  }
+
+  async function deleteLead(id) {
+    const lead = allLeads.find(l => l.id === id);
+    if (!lead) return;
+
+    if (!confirm('Are you sure you want to delete "' + lead.name + '" from the persistent database?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/leads/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete');
+      
+      await loadResults();
+      setStatus('done', 'Successfully deleted lead: ' + lead.name);
+    } catch (e) {
+      alert('Error deleting lead: ' + e.message);
+    }
+  }
+
+  // ── Init on page load ──
+  (async () => {
+    try {
+      const statusRes = await fetch('/api/status');
+      const statusData = await statusRes.json();
+      if (statusData.running) {
+        setStatus('running', 'Scraping "' + statusData.keyword + '"... (browser working)');
+        document.getElementById('btn-scrape').disabled = true;
+        document.getElementById('loading-bar').style.display = 'block';
+        pollStatus();
+      } else {
+        await loadResults();
+        if (allLeads.length > 0) {
+          setStatus('done', 'Loaded ' + allLeads.length + ' leads from database.');
+        } else {
+          setStatus('done', 'Ready');
+        }
+      }
+    } catch (e) {
+      await loadResults();
+    }
+  })();
 
   function escHtml(s) {
     if (!s) return '';

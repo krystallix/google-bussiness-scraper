@@ -101,6 +101,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to save Excel: %v\n", err)
 		os.Exit(1)
 	}
+	if err := sc.SavePersistentJSON(data); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to save persistent JSON database: %v\n", err)
+	} else {
+		fmt.Println("Saved to persistent database (scraped_businesses.json)")
+	}
 
 	absCsv, _ := filepath.Abs(csvPath)
 	absXlsx, _ := filepath.Abs(xlsxPath)

@@ -1,6 +1,7 @@
 # compiled binaries
-scraper
-server
+/scraper
+/server
+/filter
 
 # output files
 output/

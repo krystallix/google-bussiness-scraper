@@ -15,14 +15,34 @@ export default function WhatsAppModal({
 }: WhatsAppModalProps) {
   const [message, setMessage] = useState("");
 
-  const getTemplate = (bizName: string) =>
-    `Halo ${bizName}, perkenalkan saya dari tim kami.\n\n` +
-    `Kami melihat bisnis Anda di Google Maps dan ingin menawarkan:\n` +
-    `- Website profesional dengan landing page\n` +
-    `- Sistem manajemen stok digital\n` +
-    `- Invoice digital & laporan penjualan\n\n` +
-    `Apakah Anda tertarik untuk mengetahui lebih lanjut? ` +
-    `Kami siap berdiskusi kapan saja.`;
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 4 && hour < 11) return "Selamat pagi";
+    if (hour >= 11 && hour < 15) return "Selamat siang";
+    if (hour >= 15 && hour < 19) return "Selamat sore";
+    return "Selamat malam";
+  };
+
+  const getTemplate = (bizName: string): string =>
+    `${getGreeting()}, Bpk/Ibu owner ${bizName} 👋\n\n` +
+    `Perkenalkan, saya Aji Nursafiki — developer dari Risewise, sekaligus owner dari Siswanto Aki Jogja (akimobiljogja.com).\n\n` +
+    `Dalam kesempatan ini, saya ingin menawarkan website sistem manajemen toko aki yang saya bangun langsung dari pengalaman menjalankan toko aki sendiri — jadi fitur-fiturnya dibuat untuk kebutuhan nyata di lapangan, bukan sekadar template.\n\n` +
+    `Website ini memiliki beberapa fitur utama:\n` +
+    `• Halaman utama sebagai company profile yang bisa disearch di pencarian google.\n` +
+    `• Halaman Katalog aki\n` +
+    `• Rekomendasi aki berdasarkan jenis kendaraan pelanggan\n` +
+    `• Laporan transaksi harian dan bulanan\n` +
+    `• Manajemen stok otomatis\n` +
+    `• Invoice digital yang bisa langsung dikirim ke pelanggan\n` +
+    `• Pelacakan garansi aki per pelanggan\n\n` +
+    `Proposal lengkap bisa dilihat di sini:\n` +
+    `- https://proposal.arkane.my.id\n\n` +
+    `Referensi tampilan yang sudah berjalan:\n` +
+    `- https://akimobiljogja.com\n\n` +
+    `Jika Bpk/Ibu tertarik atau ingin mengetahui lebih lanjut, saya siap menjawab pertanyaan atau menjadwalkan demo gratis kapan saja.\n\n` +
+    `Terima kasih atas waktunya, semoga bisa menjadi solusi yang bermanfaat 🙏\n\n` +
+    `— Aji Nursafiki\n` +
+    `Developer @ Risewise | Owner Siswanto Aki Jogja`;
 
   useEffect(() => {
     if (isOpen && name) {

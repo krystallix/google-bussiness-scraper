@@ -36,6 +36,7 @@ type Business struct {
 	Phone        string `json:"phone"`
 	Website      string `json:"website"`
 	MapsURL      string `json:"maps_url"`
+	Status       string `json:"status"`
 }
 
 // Lead holds the classified lead data.
@@ -253,7 +254,12 @@ func BusinessesToLeads(businesses []Business) []Lead {
 			HasPhone:    b.Phone != "",
 		}
 
-		l.Tier, l.Reason = classify(l)
+		if b.Status == "COMPLETED" {
+			l.Tier = "COMPLETED"
+			l.Reason = "Message sent successfully via WhatsApp"
+		} else {
+			l.Tier, l.Reason = classify(l)
+		}
 		leads = append(leads, l)
 	}
 	return leads

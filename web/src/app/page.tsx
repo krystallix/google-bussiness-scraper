@@ -8,6 +8,7 @@ import FilterBar from "@/components/FilterBar";
 import LeadsTable from "@/components/LeadsTable";
 import LeadModal from "@/components/LeadModal";
 import WhatsAppModal from "@/components/WhatsAppModal";
+import WhatsAppConnect from "@/components/WhatsAppConnect";
 import { Lead, ScraperStatus } from "@/types";
 
 export default function Dashboard() {
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [isWaModalOpen, setIsWaModalOpen] = useState(false);
   const [waName, setWaName] = useState("");
   const [waPhone, setWaPhone] = useState("");
+  const [waLeadId, setWaLeadId] = useState("");
 
   const loadResults = useCallback(async () => {
     try {
@@ -176,7 +178,8 @@ export default function Dashboard() {
     }
   };
 
-  const handleWhatsApp = (name: string, phone: string) => {
+  const handleWhatsApp = (id: string, name: string, phone: string) => {
+    setWaLeadId(id);
     setWaName(name);
     setWaPhone(phone);
     setIsWaModalOpen(true);
@@ -188,7 +191,8 @@ export default function Dashboard() {
     const high = allLeads.filter((l) => l.tier === "HIGH POTENTIAL").length;
     const std = allLeads.filter((l) => l.tier === "STANDARD").length;
     const skip = allLeads.filter((l) => l.tier === "SKIP").length;
-    return `HIGH ${high} / STD ${std} / SKIP ${skip}`;
+    const comp = allLeads.filter((l) => l.tier === "COMPLETED").length;
+    return `HIGH ${high} / STD ${std} / SKIP ${skip} / COMP ${comp}`;
   }, [allLeads]);
 
   // Filter and sort computation
@@ -202,11 +206,11 @@ export default function Dashboard() {
 
     // Filter by sidebar section
     if (currentSection === "whatsapp") {
-      // In WhatsApp section, show only high potential with phone numbers
-      result = result.filter((l) => l.tier === "HIGH POTENTIAL" && l.phone);
+      // In WhatsApp section, show only high potential or completed with phone numbers
+      result = result.filter((l) => (l.tier === "HIGH POTENTIAL" || l.tier === "COMPLETED") && l.phone);
     } else if (currentSection === "leads") {
-      // In Leads section, show only high potential and standard
-      result = result.filter((l) => l.tier === "HIGH POTENTIAL" || l.tier === "STANDARD");
+      // In Leads section, show only high potential, standard, and completed
+      result = result.filter((l) => l.tier === "HIGH POTENTIAL" || l.tier === "STANDARD" || l.tier === "COMPLETED");
     }
 
     // Filter by search query
@@ -224,7 +228,8 @@ export default function Dashboard() {
     const tierOrder: Record<string, number> = {
       "HIGH POTENTIAL": 0,
       STANDARD: 1,
-      SKIP: 2,
+      "COMPLETED": 2,
+      SKIP: 3,
     };
 
     result = [...result].sort((a, b) => {
@@ -303,6 +308,8 @@ export default function Dashboard() {
             count={filteredLeads.length}
           />
 
+          {currentSection === "whatsapp" && <WhatsAppConnect />}
+
           <LeadsTable
             leads={filteredLeads}
             onEdit={(lead) => {
@@ -330,6 +337,8 @@ export default function Dashboard() {
         onClose={() => setIsWaModalOpen(false)}
         name={waName}
         phone={waPhone}
+        leadId={waLeadId}
+        onSuccess={loadResults}
       />
     </div>
   );

@@ -11,3 +11,10 @@ output/
 
 # Go build cache
 *.test
+
+# local files
+.antigravitycli/
+bin_server
+scraped_businesses.json
+wa.db*
+

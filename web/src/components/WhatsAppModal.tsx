@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 
 interface WhatsAppModalProps {
   isOpen: boolean;
   onClose: () => void;
   name: string;
   phone: string;
+  leadId: string;
+  onSuccess: () => void;
 }
 
 export default function WhatsAppModal({
@@ -12,8 +15,11 @@ export default function WhatsAppModal({
   onClose,
   name,
   phone,
+  leadId,
+  onSuccess,
 }: WhatsAppModalProps) {
   const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const getGreeting = (): string => {
     const hour = new Date().getHours();
@@ -52,11 +58,48 @@ export default function WhatsAppModal({
 
   if (!isOpen) return null;
 
-  const handleSend = () => {
+  const handleSend = async () => {
+    setIsSending(true);
     const rawPhone = phone.replace(/[^0-9]/g, "");
     const formattedPhone = rawPhone.startsWith("0")
       ? "62" + rawPhone.slice(1)
       : rawPhone;
+      
+    try {
+      const res = await fetch("/api/wa/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: formattedPhone, message: message.trim() })
+      });
+      
+      if (res.ok) {
+        toast.success("Message sent successfully via WhatsApp API!");
+        
+        // Mark lead as completed
+        if (leadId) {
+          try {
+            await fetch("/api/leads/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: leadId })
+            });
+            onSuccess();
+          } catch (e) {
+            console.error("Failed to mark lead as completed:", e);
+          }
+        }
+
+        onClose();
+        setIsSending(false);
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to send via API:", e);
+    }
+    
+    // Fallback to wa.me if not connected or error
+    setIsSending(false);
+    toast.error("Failed to send via API. Opening WhatsApp Web...");
     const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(
       message.trim()
     )}`;
@@ -113,10 +156,10 @@ export default function WhatsAppModal({
             </button>
             <button
               onClick={handleSend}
-              disabled={!message.trim()}
+              disabled={!message.trim() || isSending}
               className="px-5 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-lg text-[13px] transition cursor-pointer inline-flex items-center gap-1.5"
             >
-              Open WhatsApp
+              {isSending ? "Sending..." : "Send Message"}
             </button>
           </div>
         </div>

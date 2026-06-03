@@ -10,6 +10,7 @@ import (
 	"time"
 
 	sc "google-bussines-scraper/internal/scraper"
+	wa "google-bussines-scraper/internal/whatsapp"
 )
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -94,13 +95,26 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", serveIndex)
 	mux.HandleFunc("POST /api/scrape", handleScrape)
 	mux.HandleFunc("GET /api/status", handleStatus)
 	mux.HandleFunc("GET /api/results", handleResults)
 	mux.HandleFunc("POST /api/leads/add", handleAddLead)
 	mux.HandleFunc("POST /api/leads/update", handleUpdateLead)
 	mux.HandleFunc("POST /api/leads/delete", handleDeleteLead)
+	mux.HandleFunc("POST /api/leads/complete", handleCompleteLead)
+
+	// WhatsApp endpoints
+	mux.HandleFunc("GET /api/wa/status", handleWaStatus)
+	mux.HandleFunc("GET /api/wa/qr", handleWaQR)
+	mux.HandleFunc("POST /api/wa/logout", handleWaLogout)
+	mux.HandleFunc("POST /api/wa/send", handleWaSend)
+
+	// Initialize whatsapp
+	go func() {
+		if err := wa.Init(); err != nil {
+			log.Printf("Failed to init whatsapp: %v\n", err)
+		}
+	}()
 
 	addr := "127.0.0.1:8080"
 	fmt.Printf("\nG-Lead Scraper dashboard running at http://%s\n\n", addr)
@@ -109,9 +123,53 @@ func main() {
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
-func serveIndex(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(indexHTML))
+type waSendRequest struct {
+	Phone   string `json:"phone"`
+	Message string `json:"message"`
+}
+
+func handleWaStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"connected": wa.IsConnected()})
+}
+
+func handleWaQR(w http.ResponseWriter, r *http.Request) {
+	if wa.IsConnected() {
+		jsonError(w, "Already connected", http.StatusBadRequest)
+		return
+	}
+	qr := wa.GetQR()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"qr": qr})
+}
+
+func handleWaLogout(w http.ResponseWriter, r *http.Request) {
+	err := wa.Logout()
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+func handleWaSend(w http.ResponseWriter, r *http.Request) {
+	var req waSendRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Phone == "" || req.Message == "" {
+		jsonError(w, "phone and message are required", http.StatusBadRequest)
+		return
+	}
+	err := wa.SendMessage(req.Phone, req.Message)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func handleScrape(w http.ResponseWriter, r *http.Request) {
@@ -385,4 +443,52 @@ func handleDeleteLead(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
+
+type completeLeadRequest struct {
+	ID string `json:"id"`
+}
+
+func handleCompleteLead(w http.ResponseWriter, r *http.Request) {
+	var req completeLeadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.ID == "" {
+		jsonError(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	businesses, err := sc.LoadPersistentJSON()
+	if err != nil {
+		jsonError(w, "database empty or unreadable", http.StatusNotFound)
+		return
+	}
+
+	found := false
+	for i, b := range businesses {
+		if b.ID == req.ID {
+			businesses[i].Status = "COMPLETED"
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		jsonError(w, "lead not found", http.StatusNotFound)
+		return
+	}
+
+	if err := sc.SaveAllPersistentJSON(businesses); err != nil {
+		jsonError(w, fmt.Sprintf("failed to save: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	reloadMemoryState(businesses)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }

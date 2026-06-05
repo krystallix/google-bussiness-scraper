@@ -20,9 +20,10 @@ import (
 
 // Tier categories
 const (
-	TierHigh     = "HIGH POTENTIAL"
-	TierStandard = "STANDARD"
-	TierSkip     = "SKIP"
+	TierHigh      = "HIGH POTENTIAL"
+	TierStandard  = "STANDARD"
+	TierSkip      = "SKIP"
+	TierCompleted = "COMPLETED"
 )
 
 // Business holds all extracted data for a single Google Maps listing.
@@ -255,7 +256,7 @@ func BusinessesToLeads(businesses []Business) []Lead {
 		}
 
 		if b.Status == "COMPLETED" {
-			l.Tier = "COMPLETED"
+			l.Tier = TierCompleted
 			l.Reason = "Message sent successfully via WhatsApp"
 		} else {
 			l.Tier, l.Reason = classify(l)

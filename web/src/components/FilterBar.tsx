@@ -30,6 +30,12 @@ export default function FilterBar({
       activeClass: "bg-blue-500 text-white border-blue-500",
     },
     {
+      label: "Completed",
+      value: "COMPLETED",
+      className: "border-purple-800/40 hover:border-purple-500",
+      activeClass: "bg-purple-500 text-white border-purple-500",
+    },
+    {
       label: "Skip",
       value: "SKIP",
       className: "border-red-800/40 hover:border-red-500",

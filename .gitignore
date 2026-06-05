@@ -18,3 +18,5 @@ bin_server
 scraped_businesses.json
 wa.db*
 
+server.log
+tmp_server

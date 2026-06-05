@@ -22,6 +22,7 @@ export default function LeadModal({
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
   const [mapsUrl, setMapsUrl] = useState("");
+  const [isCompleted, setIsCompleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function LeadModal({
       setPhone(lead.phone || "");
       setWebsite(lead.website || "");
       setMapsUrl(lead.maps_url || "");
+      setIsCompleted(lead.tier === "COMPLETED");
     } else {
       setName("");
       setCategory("");
@@ -43,6 +45,7 @@ export default function LeadModal({
       setPhone("");
       setWebsite("");
       setMapsUrl("");
+      setIsCompleted(false);
     }
   }, [lead, isOpen]);
 
@@ -63,6 +66,7 @@ export default function LeadModal({
         phone: phone.trim(),
         website: website.trim(),
         maps_url: mapsUrl.trim(),
+        status: isCompleted ? "COMPLETED" : "",
       };
       if (lead) {
         payload.id = lead.id;
@@ -200,6 +204,19 @@ export default function LeadModal({
               onChange={(e) => setMapsUrl(e.target.value)}
               className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 focus:border-green-500 rounded-lg py-2 px-3 text-[13px] text-zinc-100 placeholder-zinc-650 outline-none transition"
             />
+          </div>
+
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="checkbox"
+              id="completed"
+              checked={isCompleted}
+              onChange={(e) => setIsCompleted(e.target.checked)}
+              className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-green-500 focus:ring-green-500 focus:ring-offset-zinc-900"
+            />
+            <label htmlFor="completed" className="text-[13px] text-zinc-100 cursor-pointer">
+              Mark as Completed (Sent WA)
+            </label>
           </div>
 
           <div className="flex gap-2 justify-end mt-4 pt-3 border-t border-zinc-800">

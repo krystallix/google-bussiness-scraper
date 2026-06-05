@@ -29,26 +29,16 @@ export default function WhatsAppModal({
     return "Selamat malam";
   };
 
-  const getTemplate = (bizName: string): string =>
-    `${getGreeting()}, Bpk/Ibu owner ${bizName} 👋\n\n` +
-    `Perkenalkan, saya Aji Nursafiki — developer dari Risewise, sekaligus owner dari Siswanto Aki Jogja (akimobiljogja.com).\n\n` +
-    `Dalam kesempatan ini, saya ingin menawarkan website sistem manajemen toko aki yang saya bangun langsung dari pengalaman menjalankan toko aki sendiri — jadi fitur-fiturnya dibuat untuk kebutuhan nyata di lapangan, bukan sekadar template.\n\n` +
-    `Website ini memiliki beberapa fitur utama:\n` +
-    `• Halaman utama sebagai company profile yang bisa disearch di pencarian google.\n` +
-    `• Halaman Katalog aki\n` +
-    `• Rekomendasi aki berdasarkan jenis kendaraan pelanggan\n` +
-    `• Laporan transaksi harian dan bulanan\n` +
-    `• Manajemen stok otomatis\n` +
-    `• Invoice digital yang bisa langsung dikirim ke pelanggan\n` +
-    `• Pelacakan garansi aki per pelanggan\n\n` +
-    `Proposal lengkap bisa dilihat di sini:\n` +
-    `- https://proposal.arkane.my.id\n\n` +
-    `Referensi tampilan yang sudah berjalan:\n` +
-    `- https://akimobiljogja.com\n\n` +
-    `Jika Bpk/Ibu tertarik atau ingin mengetahui lebih lanjut, saya siap menjawab pertanyaan atau menjadwalkan demo gratis kapan saja.\n\n` +
-    `Terima kasih atas waktunya, semoga bisa menjadi solusi yang bermanfaat 🙏\n\n` +
-    `— Aji Nursafiki\n` +
-    `Developer @ Risewise | Owner Siswanto Aki Jogja`;
+const getTemplate = (bizName: string): string =>
+    `Halo Bpk/Ibu owner ${bizName},\n\n` +
+    `Saya Aji, sesama owner toko aki  (akimobiljogja.com), ` +
+    `sekaligus programmer yang bikin website untuk beberapa bisnis termasuk website toko aki.\n\n` +
+    `Toko ${bizName} sudah punya website belum?\n\n` +
+    `Sekarang banyak orang cari toko aki lewat Google dulu sebelum datang langsung. ` +
+    `Kalau punya website, toko Bapak/Ibu bisa lebih mudah ditemukan calon pembeli.\n\n` +
+    `Boleh lihat dulu punya saya: akimobiljogja.com\n` +
+    `Mungkin bisa jadi referensi yang cocok untuk toko ${bizName}.\n\n` +
+    `— Aji`;
 
   useEffect(() => {
     if (isOpen && name) {
@@ -65,6 +55,20 @@ export default function WhatsAppModal({
       ? "62" + rawPhone.slice(1)
       : rawPhone;
       
+    const markAsCompleted = async () => {
+      if (!leadId) return;
+      try {
+        await fetch("/api/leads/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: leadId })
+        });
+        onSuccess();
+      } catch (e) {
+        console.error("Failed to mark lead as completed:", e);
+      }
+    };
+
     try {
       const res = await fetch("/api/wa/send", {
         method: "POST",
@@ -74,21 +78,7 @@ export default function WhatsAppModal({
       
       if (res.ok) {
         toast.success("Message sent successfully via WhatsApp API!");
-        
-        // Mark lead as completed
-        if (leadId) {
-          try {
-            await fetch("/api/leads/complete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: leadId })
-            });
-            onSuccess();
-          } catch (e) {
-            console.error("Failed to mark lead as completed:", e);
-          }
-        }
-
+        await markAsCompleted();
         onClose();
         setIsSending(false);
         return;
@@ -104,6 +94,8 @@ export default function WhatsAppModal({
       message.trim()
     )}`;
     window.open(url, "_blank");
+    
+    await markAsCompleted();
     onClose();
   };
 

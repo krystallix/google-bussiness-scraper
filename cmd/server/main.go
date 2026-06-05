@@ -62,6 +62,7 @@ type addLeadRequest struct {
 	Phone    string  `json:"phone"`
 	Website  string  `json:"website"`
 	MapsURL  string  `json:"maps_url"`
+	Status   string  `json:"status"`
 }
 
 type updateLeadRequest struct {
@@ -74,6 +75,7 @@ type updateLeadRequest struct {
 	Phone    string  `json:"phone"`
 	Website  string  `json:"website"`
 	MapsURL  string  `json:"maps_url"`
+	Status   string  `json:"status"`
 }
 
 type deleteLeadRequest struct {
@@ -323,6 +325,7 @@ func handleAddLead(w http.ResponseWriter, r *http.Request) {
 		Phone:        req.Phone,
 		Website:      req.Website,
 		MapsURL:      req.MapsURL,
+		Status:       req.Status,
 	}
 	newBiz.ID = sc.GenerateID(newBiz)
 
@@ -378,6 +381,7 @@ func handleUpdateLead(w http.ResponseWriter, r *http.Request) {
 			businesses[i].Phone = req.Phone
 			businesses[i].Website = req.Website
 			businesses[i].MapsURL = req.MapsURL
+			businesses[i].Status = req.Status
 			found = true
 			break
 		}

@@ -79,8 +79,8 @@ func main() {
 
 	leads := sc.BusinessesToLeads(unique)
 
-	// Sort HIGH first, then STANDARD, then SKIP; within tier by reviews desc
-	tierOrder := map[string]int{sc.TierHigh: 0, sc.TierStandard: 1, sc.TierSkip: 2}
+	// Sort HIGH first, then COMPLETED, then STANDARD, then SKIP; within tier by reviews desc
+	tierOrder := map[string]int{sc.TierHigh: 0, sc.TierCompleted: 1, sc.TierStandard: 2, sc.TierSkip: 3}
 	sort.SliceStable(leads, func(i, j int) bool {
 		ti := tierOrder[leads[i].Tier]
 		tj := tierOrder[leads[j].Tier]
@@ -123,11 +123,12 @@ func printSummary(leads []sc.Lead) {
 	fmt.Printf("Lead Analysis -- %d total businesses\n", len(leads))
 	fmt.Printf("%s\n", strings.Repeat("=", 60))
 	fmt.Printf("  HIGH POTENTIAL : %d\n", counts[sc.TierHigh])
+	fmt.Printf("  COMPLETED      : %d\n", counts[sc.TierCompleted])
 	fmt.Printf("  STANDARD       : %d\n", counts[sc.TierStandard])
 	fmt.Printf("  SKIP           : %d\n", counts[sc.TierSkip])
 	fmt.Printf("%s\n\n", strings.Repeat("-", 60))
 
-	for _, tier := range []string{sc.TierHigh, sc.TierStandard, sc.TierSkip} {
+	for _, tier := range []string{sc.TierHigh, sc.TierCompleted, sc.TierStandard, sc.TierSkip} {
 		fmt.Printf("[ %s ]\n", tier)
 		for _, l := range leads {
 			if l.Tier != tier {
@@ -195,9 +196,10 @@ func quoteCSV(row []string) []string {
 }
 
 var tierColors = map[string]string{
-	sc.TierHigh:     "63BE7B",
-	sc.TierStandard: "FFEB84",
-	sc.TierSkip:     "F8696B",
+	sc.TierHigh:      "63BE7B",
+	sc.TierCompleted: "84B6FF", // Blueish
+	sc.TierStandard:  "FFEB84",
+	sc.TierSkip:      "F8696B",
 }
 
 func saveFilteredXLSX(path string, leads []sc.Lead) error {

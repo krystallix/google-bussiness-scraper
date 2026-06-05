@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   backend:
     build:
@@ -11,8 +9,6 @@ services:
       - ./scraped_businesses.json:/app/scraped_businesses.json
       - ./output:/app/output
     restart: unless-stopped
-    environment:
-      # Optional: any env vars the backend might need
 
   frontend:
     build:

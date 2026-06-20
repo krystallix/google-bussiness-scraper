@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import toast from "react-hot-toast";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import Statusbar from "@/components/Statusbar";
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState("tier");
   const [sortAsc, setSortAsc] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Scraper control state
   const [keyword, setKeyword] = useState("");
@@ -184,6 +186,94 @@ export default function Dashboard() {
     setWaPhone(phone);
     setIsWaModalOpen(true);
   };
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 4 && hour < 11) return "Selamat pagi";
+    if (hour >= 11 && hour < 15) return "Selamat siang";
+    if (hour >= 15 && hour < 19) return "Selamat sore";
+    return "Selamat malam";
+  };
+
+  const getWATemplate = (bizName: string): string =>
+    `${getGreeting()}, owner ${bizName}\n\n` +
+    `Saya Aji, , ` +
+    `Seorang programmer yang sering bikin website buat bisnis, termasuk toko aki.\n\n` +
+    `Saya cek toko ${bizName} di Google Maps, ratingnya bagus, review juga cukup banyak. ` +
+    `Tapi kayaknya belum ada website buat toko Anda.\n\n` +
+    `Toko ${bizName} sudah punya website belum?\n\n` +
+    `Sekarang banyak orang cari toko aki lewat Google dulu sebelum langsung dateng. ` +
+    `Kalau udah punya website, toko makin gampang ditemukan calon pembeli. ` +
+    `Bisa juga ditambahkan fitur lain-lain.\n\n` +
+    `Sebagai contoh, website saya punya fitur pelacakan garansi realtime, manajemen pelanggan, serta laporan transaksi.\n\n` +
+    `Boleh lihat dulu punya saya: akimobiljogja.com\n` +
+    `Atau bisa lihat ke profile saya.\n` +
+    `Mungkin bisa jadi referensi yang cocok buat toko ${bizName}.\n\n` +
+    `Kalau Bapak/Ibu tertarik, boleh saya kirim audit singkat apa yang bisa ditingkatkan?\n\n` +
+    `— Aji`;
+
+  const handleBulkWhatsApp = async () => {
+    if (selectedIds.length === 0) return;
+
+    if (selectedIds.length === 1) {
+      const lead = allLeads.find((l) => l.id === selectedIds[0]);
+      if (lead && lead.phone) {
+        handleWhatsApp(lead.id, lead.name, lead.phone);
+      }
+      return;
+    }
+
+    const selectedLeads = allLeads.filter(
+      (l) => selectedIds.includes(l.id) && l.phone
+    );
+
+    if (selectedLeads.length === 0) {
+      toast.error("No selected leads have phone numbers");
+      return;
+    }
+
+    if (!confirm(`Send WhatsApp to ${selectedLeads.length} selected lead(s)?`)) return;
+
+    toast.success(`Processing ${selectedLeads.length} lead(s)...`);
+
+    for (const lead of selectedLeads) {
+      const rawPhone = lead.phone.replace(/[^0-9]/g, "");
+      const formattedPhone = rawPhone.startsWith("0")
+        ? "62" + rawPhone.slice(1)
+        : rawPhone;
+
+      const message = getWATemplate(lead.name);
+
+      let apiOk = false;
+      try {
+        const res = await fetch("/api/wa/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: formattedPhone, message }),
+        });
+        apiOk = res.ok;
+      } catch { }
+
+      if (!apiOk) {
+        const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+        window.open(url, "_blank");
+        await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+
+    for (const id of selectedIds) {
+      try {
+        await fetch("/api/leads/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+      } catch { }
+    }
+
+    setSelectedIds([]);
+    toast.success(`Done! Processed ${selectedLeads.length} lead(s)`);
+    await loadResults();
+  };
 
   // Stats summary for Sidebar
   const summaryText = useMemo(() => {
@@ -207,7 +297,7 @@ export default function Dashboard() {
     // Filter by sidebar section
     if (currentSection === "whatsapp") {
       // In WhatsApp section, show only high potential or completed with phone numbers
-      result = result.filter((l) => (l.tier === "HIGH POTENTIAL" || l.tier === "COMPLETED") && l.phone);
+      result = result.filter((l) => (l.tier === "HIGH POTENTIAL" || l.tier === "STANDARD" || l.tier === "COMPLETED") && l.phone);
     } else if (currentSection === "leads") {
       // In Leads section, show only high potential, standard, and completed
       result = result.filter((l) => l.tier === "HIGH POTENTIAL" || l.tier === "STANDARD" || l.tier === "COMPLETED");
@@ -258,6 +348,16 @@ export default function Dashboard() {
     return result;
   }, [allLeads, activeFilter, currentSection, searchQuery, sortField, sortAsc]);
 
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    setSelectedIds([]);
+  };
+
+  const handleSectionChange = (section: string) => {
+    setCurrentSection(section);
+    setSelectedIds([]);
+  };
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortAsc(!sortAsc);
@@ -271,7 +371,7 @@ export default function Dashboard() {
     <div className="flex h-screen overflow-hidden bg-zinc-950 font-sans">
       <Sidebar
         currentSection={currentSection}
-        setCurrentSection={setCurrentSection}
+        setCurrentSection={handleSectionChange}
         summary={summaryText}
       />
 
@@ -302,11 +402,35 @@ export default function Dashboard() {
 
           <FilterBar
             activeFilter={activeFilter}
-            setActiveFilter={setActiveFilter}
+            setActiveFilter={handleFilterChange}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             count={filteredLeads.length}
           />
+
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2 mb-4 bg-zinc-800/60 border border-zinc-700 rounded-lg">
+              <span className="text-[13px] text-zinc-300 font-mono">
+                {selectedIds.length} selected
+              </span>
+              <button
+                onClick={handleBulkWhatsApp}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 transition cursor-pointer font-mono"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M11.998 0C5.372 0 0 5.373 0 12c0 2.117.554 4.107 1.523 5.832L0 24l6.335-1.652A11.954 11.954 0 0011.998 24C18.626 24 24 18.627 24 12S18.626 0 11.998 0zm0 21.818a9.818 9.818 0 01-5.01-1.374l-.36-.213-3.76.984.998-3.65-.233-.375A9.82 9.82 0 012.18 12c0-5.42 4.4-9.818 9.818-9.818 5.42 0 9.82 4.398 9.82 9.818 0 5.42-4.4 9.818-9.82 9.818z" />
+                </svg>
+                Send WA to Selected
+              </button>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="text-[12px] text-zinc-500 hover:text-zinc-300 transition cursor-pointer font-mono"
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {currentSection === "whatsapp" && <WhatsAppConnect />}
 
@@ -321,6 +445,8 @@ export default function Dashboard() {
             sortField={sortField}
             sortAsc={sortAsc}
             onSort={handleSort}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </main>
       </div>

@@ -29,16 +29,23 @@ export default function WhatsAppModal({
     return "Selamat malam";
   };
 
-const getTemplate = (bizName: string): string =>
-    `Halo Bpk/Ibu owner ${bizName},\n\n` +
-    `Saya Aji, sesama owner toko aki  (akimobiljogja.com), ` +
-    `sekaligus programmer yang bikin website untuk beberapa bisnis termasuk website toko aki.\n\n` +
+  const getTemplate = (bizName: string): string =>
+    `${getGreeting()}, owner ${bizName}\n\n` +
+    `Saya Aji, , ` +
+    `Seorang programmer yang sering bikin website buat bisnis, termasuk toko aki.\n\n` +
+    `Saya cek toko ${bizName} di Google Maps, ratingnya bagus, review juga cukup banyak. ` +
+    `Tapi kayaknya belum ada website buat toko Anda.\n\n` +
     `Toko ${bizName} sudah punya website belum?\n\n` +
-    `Sekarang banyak orang cari toko aki lewat Google dulu sebelum datang langsung. ` +
-    `Kalau punya website, toko Bapak/Ibu bisa lebih mudah ditemukan calon pembeli.\n\n` +
+    `Sekarang banyak orang cari toko aki lewat Google dulu sebelum langsung dateng. ` +
+    `Kalau udah punya website, toko makin gampang ditemukan calon pembeli. ` +
+    `Bisa juga ditambahkan fitur lain-lain.\n\n` +
+    `Sebagai contoh, website saya punya fitur pelacakan garansi realtime, manajemen pelanggan, serta laporan transaksi.\n\n` +
     `Boleh lihat dulu punya saya: akimobiljogja.com\n` +
-    `Mungkin bisa jadi referensi yang cocok untuk toko ${bizName}.\n\n` +
+    `Atau bisa lihat ke profile saya.\n` +
+    `Mungkin bisa jadi referensi yang cocok buat toko ${bizName}.\n\n` +
+    `Kalau Bapak/Ibu tertarik, boleh saya kirim audit singkat apa yang bisa ditingkatkan?\n\n` +
     `— Aji`;
+
 
   useEffect(() => {
     if (isOpen && name) {
@@ -54,7 +61,7 @@ const getTemplate = (bizName: string): string =>
     const formattedPhone = rawPhone.startsWith("0")
       ? "62" + rawPhone.slice(1)
       : rawPhone;
-      
+
     const markAsCompleted = async () => {
       if (!leadId) return;
       try {
@@ -75,7 +82,7 @@ const getTemplate = (bizName: string): string =>
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: formattedPhone, message: message.trim() })
       });
-      
+
       if (res.ok) {
         toast.success("Message sent successfully via WhatsApp API!");
         await markAsCompleted();
@@ -86,7 +93,7 @@ const getTemplate = (bizName: string): string =>
     } catch (e) {
       console.error("Failed to send via API:", e);
     }
-    
+
     // Fallback to wa.me if not connected or error
     setIsSending(false);
     toast.error("Failed to send via API. Opening WhatsApp Web...");
@@ -94,7 +101,7 @@ const getTemplate = (bizName: string): string =>
       message.trim()
     )}`;
     window.open(url, "_blank");
-    
+
     await markAsCompleted();
     onClose();
   };

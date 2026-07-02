@@ -84,7 +84,7 @@ func ScrapeGoogleMaps(keyword string, limit int, headful bool, delay float64) ([
 		fmt.Println("Found business listing, scrolling to collect URLs...")
 
 		bar := progressbar.NewOptions(limit,
-			progressbar.OptionSetDescription("Mengumpulkan URL"),
+			progressbar.OptionSetDescription("Collecting URLs"),
 			progressbar.OptionSetWidth(40),
 			progressbar.OptionShowCount(),
 			progressbar.OptionSetTheme(progressbar.Theme{
@@ -155,7 +155,7 @@ func ScrapeGoogleMaps(keyword string, limit int, headful bool, delay float64) ([
 			fmt.Println("Redirected to a single business page.")
 			collectedURLs[cleanURL(currentURL)] = struct{}{}
 		} else {
-			return nil, fmt.Errorf("tidak dapat menemukan daftar bisnis maupun halaman detail bisnis")
+			return nil, fmt.Errorf("could not find business listing or detail page")
 		}
 	}
 
@@ -167,7 +167,7 @@ func ScrapeGoogleMaps(keyword string, limit int, headful bool, delay float64) ([
 	fmt.Printf("\nCollected %d business URLs. Extracting details...\n", len(totalURLs))
 
 	bar := progressbar.NewOptions(len(totalURLs),
-		progressbar.OptionSetDescription("Mengekstrak detail"),
+		progressbar.OptionSetDescription("Extracting details"),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetTheme(progressbar.Theme{
@@ -222,8 +222,8 @@ func extractBusiness(page *rod.Page, placeURL string) (Business, error) {
 	// 2. Rating
 	b.Rating = innerText(page, `div.F7nice span span[aria-hidden="true"]`)
 	if b.Rating == "" {
-		// Fallback: aria-label containing "star" or "bintang"
-		if el := firstElement(page, `span[aria-label*="star"], span[aria-label*="bintang"]`); el != nil {
+		// Fallback: aria-label containing "star"
+		if el := firstElement(page, `span[aria-label*="star"]`); el != nil {
 			ariaLabel, _ := el.Attribute("aria-label")
 			if ariaLabel != nil {
 				re := regexp.MustCompile(`(\d[\.,]\d)`)
@@ -235,7 +235,7 @@ func extractBusiness(page *rod.Page, placeURL string) (Business, error) {
 	}
 
 	// 3. Reviews Count
-	if el := firstElement(page, `div.F7nice span[aria-label*="ulasan"], div.F7nice span[aria-label*="review"]`); el != nil {
+	if el := firstElement(page, `div.F7nice span[aria-label*="review"]`); el != nil {
 		ariaLabel, _ := el.Attribute("aria-label")
 		if ariaLabel != nil {
 			re := regexp.MustCompile(`([\d\.,]+)`)
@@ -276,6 +276,10 @@ func extractBusiness(page *rod.Page, placeURL string) (Business, error) {
 			break
 		}
 	}
+	// Strip non-digit chars except leading +
+	re := regexp.MustCompile(`[^\d+]`)
+	phone = re.ReplaceAllString(phone, "")
+	phone = strings.TrimPrefix(phone, "+")
 	b.Phone = phone
 
 	return b, nil

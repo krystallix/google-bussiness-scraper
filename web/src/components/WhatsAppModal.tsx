@@ -23,28 +23,21 @@ export default function WhatsAppModal({
 
   const getGreeting = (): string => {
     const hour = new Date().getHours();
-    if (hour >= 4 && hour < 11) return "Selamat pagi";
-    if (hour >= 11 && hour < 15) return "Selamat siang";
-    if (hour >= 15 && hour < 19) return "Selamat sore";
-    return "Selamat malam";
+    if (hour >= 4 && hour < 11) return "Good morning";
+    if (hour >= 11 && hour < 15) return "Good afternoon";
+    if (hour >= 15 && hour < 19) return "Good afternoon";
+    return "Good evening";
   };
 
   const getTemplate = (bizName: string): string =>
-    `${getGreeting()}, owner ${bizName}\n\n` +
-    `Saya Aji, , ` +
-    `Seorang programmer yang sering bikin website buat bisnis, termasuk toko aki.\n\n` +
-    `Saya cek toko ${bizName} di Google Maps, ratingnya bagus, review juga cukup banyak. ` +
-    `Tapi kayaknya belum ada website buat toko Anda.\n\n` +
-    `Toko ${bizName} sudah punya website belum?\n\n` +
-    `Sekarang banyak orang cari toko aki lewat Google dulu sebelum langsung dateng. ` +
-    `Kalau udah punya website, toko makin gampang ditemukan calon pembeli. ` +
-    `Bisa juga ditambahkan fitur lain-lain.\n\n` +
-    `Sebagai contoh, website saya punya fitur pelacakan garansi realtime, manajemen pelanggan, serta laporan transaksi.\n\n` +
-    `Boleh lihat dulu punya saya: akimobiljogja.com\n` +
-    `Atau bisa lihat ke profile saya.\n` +
-    `Mungkin bisa jadi referensi yang cocok buat toko ${bizName}.\n\n` +
-    `Kalau Bapak/Ibu tertarik, boleh saya kirim audit singkat apa yang bisa ditingkatkan?\n\n` +
-    `— Aji`;
+    `${getGreeting()},\n\n` +
+    `I checked ${bizName} on Google Maps — great rating and plenty of reviews. ` +
+    `It looks like you don't have a website yet.\n\n` +
+    `Does ${bizName} have a website?\n\n` +
+    `Most people search Google first before visiting a business. ` +
+    `A website makes it easy for potential customers to find you. ` +
+    `You can also add features like online ordering, booking, or product catalogs.\n\n` +
+    `Would you like a quick audit of what a website for ${bizName} could look like?`;
 
 
   useEffect(() => {

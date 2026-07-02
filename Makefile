@@ -7,10 +7,10 @@ GOENV  := GOTOOLCHAIN=local CGO_ENABLED=0
 run: build
 	@./$(BINARY)
 
-# Compile the CLI binary
+# Compile the server binary
 build:
-	@echo "Building CLI..."
-	@$(GOENV) go build -o $(BINARY) .
+	@echo "Building server..."
+	@$(GOENV) go build -o $(BINARY) ./cmd/server/
 	@echo "Done. Run with: ./$(BINARY)"
 
 # Start the web GUI dashboard

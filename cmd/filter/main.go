@@ -157,7 +157,7 @@ func truncate(s string, max int) string {
 func saveFilteredCSV(path string, leads []sc.Lead) error {
 	// Build businesses with tier info as extra columns
 	var rows [][]string
-	rows = append(rows, []string{"Tier", "Nama Bisnis", "Rating", "Jumlah Ulasan", "Has Website", "Website", "Telepon", "Alamat", "Alasan", "Google Maps URL"})
+	rows = append(rows, []string{"Tier", "Business Name", "Rating", "Reviews", "Has Website", "Website", "Phone", "Address", "Reason", "Google Maps URL"})
 	for _, l := range leads {
 		hasWeb := "No"
 		if l.HasWebsite {
@@ -210,7 +210,7 @@ func saveFilteredXLSX(path string, leads []sc.Lead) error {
 	xf.NewSheet(sheet)
 	xf.DeleteSheet("Sheet1")
 
-	headers := []string{"Tier", "Nama Bisnis", "Rating", "Reviews", "Has Website", "Website", "Telepon", "Alamat", "Alasan", "Maps URL"}
+	headers := []string{"Tier", "Business Name", "Rating", "Reviews", "Has Website", "Website", "Phone", "Address", "Reason", "Maps URL"}
 	colWidths := []float64{18, 38, 8, 10, 12, 35, 18, 45, 50, 20}
 
 	boldStyle, _ := xf.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})

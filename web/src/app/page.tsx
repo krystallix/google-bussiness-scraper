@@ -188,28 +188,21 @@ export default function Dashboard() {
   };
   const getGreeting = (): string => {
     const hour = new Date().getHours();
-    if (hour >= 4 && hour < 11) return "Selamat pagi";
-    if (hour >= 11 && hour < 15) return "Selamat siang";
-    if (hour >= 15 && hour < 19) return "Selamat sore";
-    return "Selamat malam";
+    if (hour >= 4 && hour < 11) return "Good morning";
+    if (hour >= 11 && hour < 15) return "Good afternoon";
+    if (hour >= 15 && hour < 19) return "Good afternoon";
+    return "Good evening";
   };
 
   const getWATemplate = (bizName: string): string =>
-    `${getGreeting()}, owner ${bizName}\n\n` +
-    `Saya Aji, , ` +
-    `Seorang programmer yang sering bikin website buat bisnis, termasuk toko aki.\n\n` +
-    `Saya cek toko ${bizName} di Google Maps, ratingnya bagus, review juga cukup banyak. ` +
-    `Tapi kayaknya belum ada website buat toko Anda.\n\n` +
-    `Toko ${bizName} sudah punya website belum?\n\n` +
-    `Sekarang banyak orang cari toko aki lewat Google dulu sebelum langsung dateng. ` +
-    `Kalau udah punya website, toko makin gampang ditemukan calon pembeli. ` +
-    `Bisa juga ditambahkan fitur lain-lain.\n\n` +
-    `Sebagai contoh, website saya punya fitur pelacakan garansi realtime, manajemen pelanggan, serta laporan transaksi.\n\n` +
-    `Boleh lihat dulu punya saya: akimobiljogja.com\n` +
-    `Atau bisa lihat ke profile saya.\n` +
-    `Mungkin bisa jadi referensi yang cocok buat toko ${bizName}.\n\n` +
-    `Kalau Bapak/Ibu tertarik, boleh saya kirim audit singkat apa yang bisa ditingkatkan?\n\n` +
-    `— Aji`;
+    `${getGreeting()},\n\n` +
+    `I checked ${bizName} on Google Maps — great rating and plenty of reviews. ` +
+    `It looks like you don't have a website yet.\n\n` +
+    `Does ${bizName} have a website?\n\n` +
+    `Most people search Google first before visiting a business. ` +
+    `A website makes it easy for potential customers to find you. ` +
+    `You can also add features like online ordering, booking, or product catalogs.\n\n` +
+    `Would you like a quick audit of what a website for ${bizName} could look like?`;
 
   const handleBulkWhatsApp = async () => {
     if (selectedIds.length === 0) return;
@@ -275,6 +268,26 @@ export default function Dashboard() {
     await loadResults();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    if (!confirm(`Delete ${selectedIds.length} selected lead(s)?`)) return;
+
+    for (const id of selectedIds) {
+      try {
+        await fetch("/api/leads/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+      } catch {}
+    }
+
+    setSelectedIds([]);
+    toast.success(`Deleted ${selectedIds.length} lead(s)`);
+    await loadResults();
+  };
+
   // Stats summary for Sidebar
   const summaryText = useMemo(() => {
     if (allLeads.length === 0) return "No data yet";
@@ -283,6 +296,16 @@ export default function Dashboard() {
     const skip = allLeads.filter((l) => l.tier === "SKIP").length;
     const comp = allLeads.filter((l) => l.tier === "COMPLETED").length;
     return `HIGH ${high} / STD ${std} / SKIP ${skip} / COMP ${comp}`;
+  }, [allLeads]);
+
+  const duplicatePhones = useMemo(() => {
+    const freq = new Map<string, number>();
+    for (const l of allLeads) {
+      if (l.phone) {
+        freq.set(l.phone, (freq.get(l.phone) || 0) + 1);
+      }
+    }
+    return new Set(Array.from(freq.entries()).filter(([_, c]) => c > 1).map(([p]) => p));
   }, [allLeads]);
 
   // Filter and sort computation
@@ -424,6 +447,16 @@ export default function Dashboard() {
                 Send WA to Selected
               </button>
               <button
+                onClick={handleBulkDelete}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition cursor-pointer font-mono"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Delete Selected
+              </button>
+              <button
                 onClick={() => setSelectedIds([])}
                 className="text-[12px] text-zinc-500 hover:text-zinc-300 transition cursor-pointer font-mono"
               >
@@ -447,6 +480,7 @@ export default function Dashboard() {
             onSort={handleSort}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
+            duplicatePhones={duplicatePhones}
           />
         </main>
       </div>

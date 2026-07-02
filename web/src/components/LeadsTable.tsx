@@ -19,6 +19,7 @@ interface LeadsTableProps {
   onSort: (field: string) => void;
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
+  duplicatePhones: Set<string>;
 }
 
 export default function LeadsTable({
@@ -30,6 +31,7 @@ export default function LeadsTable({
   sortAsc: _sortAsc,
   selectedIds,
   onSelectionChange,
+  duplicatePhones,
 }: LeadsTableProps) {
   const renderStars = (rating: number) => {
     if (!rating) return "—";
@@ -209,7 +211,16 @@ export default function LeadsTable({
                       {l.category || "—"}
                     </td>
                     <td className="py-3 px-4 text-[12px] font-mono text-zinc-300 whitespace-nowrap">
-                      {l.phone || "—"}
+                      {l.phone ? (
+                        <div className="flex items-center gap-1.5">
+                          <span>{l.phone}</span>
+                          {duplicatePhones.has(l.phone) && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/25 font-mono leading-none">
+                              dup
+                            </span>
+                          )}
+                        </div>
+                      ) : "—"}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       {l.has_website ? (

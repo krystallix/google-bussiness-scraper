@@ -77,8 +77,8 @@ func SaveCSV(path string, businesses []Business) error {
 	defer w.Flush()
 
 	headers := []string{
-		"Nama Bisnis", "Kategori", "Rating", "Jumlah Ulasan",
-		"Alamat", "Telepon", "Website", "Google Maps URL",
+		"Business Name", "Category", "Rating", "Reviews",
+		"Address", "Phone", "Website", "Google Maps URL",
 	}
 	if err := w.Write(headers); err != nil {
 		return err
@@ -107,8 +107,8 @@ func SaveXLSX(path string, businesses []Business) error {
 
 	sheet := "Sheet1"
 	headers := []string{
-		"Nama Bisnis", "Kategori", "Rating", "Jumlah Ulasan",
-		"Alamat", "Telepon", "Website", "Google Maps URL",
+		"Business Name", "Category", "Rating", "Reviews",
+		"Address", "Phone", "Website", "Google Maps URL",
 	}
 
 	// Style: bold header
@@ -190,12 +190,12 @@ func ParseCSV(path string) ([]Business, error) {
 	var businesses []Business
 	for _, row := range records[1:] {
 		businesses = append(businesses, Business{
-			Name:         get(row, "Nama Bisnis"),
-			Category:     get(row, "Kategori"),
+			Name:         get(row, "Business Name"),
+			Category:     get(row, "Category"),
 			Rating:       get(row, "Rating"),
-			ReviewsCount: get(row, "Jumlah Ulasan"),
-			Address:      get(row, "Alamat"),
-			Phone:        get(row, "Telepon"),
+			ReviewsCount: get(row, "Reviews"),
+			Address:      get(row, "Address"),
+			Phone:        get(row, "Phone"),
 			Website:      get(row, "Website"),
 			MapsURL:      get(row, "Google Maps URL"),
 		})

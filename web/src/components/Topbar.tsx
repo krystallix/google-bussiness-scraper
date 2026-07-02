@@ -48,7 +48,7 @@ export default function Topbar({
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="e.g. coffee shop Bandung, toko aki Semarang..."
+            placeholder="e.g. coffee shop Bandung, laundry Jakarta..."
             className="w-full bg-zinc-950 border border-zinc-700 hover:border-zinc-600 focus:border-green-500 rounded-lg py-2 pl-9 pr-4 text-[14px] text-zinc-100 placeholder-zinc-500 outline-none transition"
             autoComplete="off"
           />
